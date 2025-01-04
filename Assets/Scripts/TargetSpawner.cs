@@ -1,42 +1,61 @@
+using System;
 using System.Collections;
+using System.Linq;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 public class TargetSpawner : MonoBehaviour
 {
     public Target targetPrefab;
-    public float updateInterval = 3f;
+    public float updateInterval = 1f;
     public float spawnInterval = 1f;
+    
+    private Coroutine updateIntervalCoroutine;
+    private Coroutine spawnTargetCoroutine;
 
     private void Awake()
     {
-        for (int j = 0; j <= 5; j++)
+        updateIntervalCoroutine = StartCoroutine(UpdateInterval());
+        spawnTargetCoroutine = StartCoroutine(SpawnTargetLoop());
+    }
+
+    private void Update()
+    {
+        if (GameManager.Instance.timer <= 0f)
         {
-            for (int i = -9; i <= 9; i++)
+            if (updateIntervalCoroutine != null)
             {
-                Target target = Instantiate(targetPrefab, new Vector3(2 * i, (2*j)+1, 20), Quaternion.identity);
-                GameManager.Instance.unSpawnedTargets.Add(target);
+                StopCoroutine(updateIntervalCoroutine);
+                updateIntervalCoroutine = null;
+            }
+            if (spawnTargetCoroutine != null)
+            {
+                StopCoroutine(spawnTargetCoroutine);
+                spawnTargetCoroutine = null;
             }
         }
     }
 
-    private void Start()
-    {
-        StartCoroutine(SpawnTarget());
-    }
-
     IEnumerator UpdateInterval()
     {
-        yield return new WaitForSeconds(updateInterval);
-        spawnInterval -= 0.1f;
+        while (true)
+        {
+            yield return new WaitForSeconds(updateInterval);
+            spawnInterval = Mathf.Max(spawnInterval - 0.1f, 0.2f); // 최소 간격 설정
+        }
     }
 
-    IEnumerator SpawnTarget()
+    IEnumerator SpawnTargetLoop()
     {
-        yield return new WaitForSeconds(spawnInterval);
-        int targetNum = Random.Range(0, GameManager.Instance.unSpawnedTargets.Count);
-        GameManager.Instance.unSpawnedTargets[targetNum].gameObject.SetActive(true);
-        GameManager.Instance.spawnedTargets.Add(GameManager.Instance.unSpawnedTargets[targetNum]);
-        GameManager.Instance.unSpawnedTargets.RemoveAt(targetNum);
+        while (true)
+        {
+            int targetNum = Random.Range(0, GameManager.Instance.unSpawnedTargets.Count);
+            Target target = GameManager.Instance.unSpawnedTargets[targetNum];
+         
+            target.gameObject.SetActive(true);
+            GameManager.Instance.spawnedTargets.Add(target);
+            GameManager.Instance.unSpawnedTargets.RemoveAt(targetNum);
+            yield return new WaitForSeconds(spawnInterval);
+        }
     }
 }

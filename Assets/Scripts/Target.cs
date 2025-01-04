@@ -6,12 +6,19 @@ public class Target : MonoBehaviour
     public float lifeDuration = 2f;
     public GameObject particlePrefab;
 
-    private IEnumerator Start()
+    private void OnEnable()
     {
-        yield return new WaitForSeconds(lifeDuration);
-        GameManager.Instance.unSpawnedTargets.Add(this);
-        
-        Destroy(gameObject);
+        Invoke("TargetDestroy", lifeDuration);
+    }
+
+    private void TargetDestroy()
+    {
+        if (gameObject.activeSelf)
+        {
+            GameManager.Instance.unSpawnedTargets.Add(this);
+            GameManager.Instance.spawnedTargets.Remove(this);
+            gameObject.SetActive(false);
+        }
     }
 
     private void OnTriggerEnter(Collider other)
@@ -19,8 +26,7 @@ public class Target : MonoBehaviour
         other.CompareTag("Bullet");
         {
             GameManager.Instance.score++;
-            GameManager.Instance.unSpawnedTargets.Add(this);
-            Destroy(gameObject);
+            TargetDestroy();
         }
     }
 }
